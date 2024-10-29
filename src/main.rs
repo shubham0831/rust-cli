@@ -1,8 +1,10 @@
 use std::{env, fs};
 use std::io::Read;
+use std::ops::Deref;
 use std::time::Duration;
 
-use clap::{arg, Command};
+use clap::{arg, Arg, ArgAction, ArgMatches, Command};
+use clap::parser::MatchesError;
 use env_logger;
 use log::{debug, trace};
 use reqwest::blocking::Client;
@@ -12,20 +14,29 @@ use models::*;
 mod models;
 
 fn main() {
-    env::set_var("RUST_LOG", "debug");
-    env_logger::init();
-
     // set log level from args
     let matcher = Command::new("cli")
         .about("todo")
         .version("1.0")
         .author("Shubham")
         .arg(
+            Arg::new("log")
+                .short('l')
+                .value_name("LEVEL")
+                .required(false)
+                .action(ArgAction::Append)
+                .default_value("debug")
+                .default_missing_value("debug")
+                .num_args(1),
+        )
+        .arg(
             arg!([input] "users query")
                 .trailing_var_arg(true)
                 .num_args(1..),
         )
         .get_matches();
+
+    set_log_level(&matcher);
 
     let user_query = matcher
         .try_get_many::<String>("input")
@@ -94,7 +105,7 @@ fn main() {
 
     // check out iter mut
     for (i, suggestion) in suggestions.iter().enumerate() {
-        println!("{} {} \n {}", i, suggestion.cmd, suggestion.reasoning);
+        println!("{} - {} \n {}", i, suggestion.cmd, suggestion.reasoning);
     }
 
     // suggestions.iter().for_each(|s| match &s.missing_fields {
@@ -108,6 +119,35 @@ fn main() {
     //         println!("{}", ss.)
     //     }
     // })
+}
+
+fn set_log_level(matcher: &ArgMatches) {
+    let log_level: String = match matcher.try_get_one::<String>("log") {
+        Ok(s) => {
+            if let Some(level) = s {
+                level.to_string()
+            } else {
+                println!("log level is an optional of None, setting it to a default of debug");
+                "debug".to_string()
+            }
+        }
+        Err(e) => {
+            println!("error while getting log level from user {}", e);
+            println!("setting log level to a default of debug");
+            "debug".to_string()
+        }
+    };
+
+    match log_level.to_lowercase().as_str() {
+        "error" => env::set_var("RUST_LOG", "error"),
+        "warn" => env::set_var("RUST_LOG", "warn"),
+        "info" => env::set_var("RUST_LOG", "warn"),
+        "debug" => env::set_var("RUST_LOG", "debug"),
+        "trace" => env::set_var("RUST_LOG", "trace"),
+        _ => env::set_var("RUST_LOG", "debug"),
+    }
+
+    env_logger::init();
 }
 
 fn init_and_get_context(his_file_path: String) -> Context {
