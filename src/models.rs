@@ -1,5 +1,34 @@
+use std::fmt::{Debug, Display, Formatter};
+use std::num::ParseIntError;
+
 use serde::{Deserialize, Serialize};
 use serde_json::to_string;
+
+// parse errors
+pub enum CustomParserError {
+    ParseIntError(ParseIntError),
+    OutOfBoundError(String),
+}
+
+impl Debug for CustomParserError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CustomParserError::ParseIntError(e) => write!(f, "ParseIntError: {:?}", e),
+            CustomParserError::OutOfBoundError(msg) => write!(f, "OutOfBoundError: {}", msg),
+        }
+    }
+}
+
+impl Display for CustomParserError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CustomParserError::ParseIntError(e) => write!(f, "Failed to parse integer: {}", e),
+            CustomParserError::OutOfBoundError(msg) => write!(f, "Out of bounds error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for CustomParserError {}
 
 // context
 #[derive(Serialize, Deserialize)]
@@ -63,7 +92,7 @@ impl Prompts {
 
             suggestion = {{
               "cmd": string // command you think will help the user; if there is a missing field in
-              the command it should be enclosed in <> brackets,
+              the command it should be enclosed in <> brackets this is very important,
               "missing_fields": [] missing_fields // list of fields you might need to make the
               command a valid command; should match the template key in the command exactly,
               "reasoning": "<your reasoning for suggesting the command based on the context>"
@@ -73,6 +102,10 @@ impl Prompts {
               "key": string // what field you need from the user,
               "reasoning": string // why you need the field
             }}
+
+            It is important to remember that for each missing field you have for a command an equivalent
+            <key> should be there which is surrounded by <>. If that is not possible, do not return
+            any missing fields.
 
             With all this said, here are some key instructions and points to remember:
 
@@ -189,10 +222,10 @@ pub struct OllamaPlaceholderResponse {
 pub struct ModelSuggestion {
     pub cmd: String,
     pub reasoning: String,
-    pub missing_fields: Option<Vec<MissingField>>,
+    pub missing_fields: Vec<MissingField>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct MissingField {
     pub key: String,
     pub reasoning: String,
