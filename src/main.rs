@@ -1,5 +1,6 @@
 use std::{env, fs};
 use std::io::{Read, stdin, stdout, Write};
+use std::process::ExitStatus;
 use std::time::Duration;
 
 use clap::{arg, Arg, ArgAction, ArgMatches, Command};
@@ -48,7 +49,7 @@ fn main() {
     let context = init_and_get_context("/Users/shubham/.temp_his".to_string());
     let system_prompt = Prompts::get_system_prompt(&context);
 
-    debug!("user query is {}", user_query);
+    trace!("user query is {}", user_query);
     trace!(
         "context is {}",
         serde_json::to_string(&context).unwrap_or("unable to deserialize context".to_string())
@@ -125,30 +126,36 @@ fn main() {
     let user_choice = suggestions.get(user_choice_idx_res.unwrap()).unwrap();
     debug!("user selected the command {}", user_choice.cmd);
 
-    let mut cmd_to_exec = user_choice.cmd.clone();
+    let mut execute_str = user_choice.cmd.clone();
     if !user_choice.missing_fields.is_empty() {
-        cmd_to_exec = mass_replace_in_string(cmd_to_exec, user_choice.missing_fields.clone());
+        execute_str = mass_replace_in_string(execute_str, user_choice.missing_fields.clone());
     }
 
-    println!("cmd to exec is {}", cmd_to_exec);
+    println!("cmd to exec is {}", execute_str);
 
-    let split_cmd = shell_words::split(&cmd_to_exec).unwrap_or_else(|e| panic!("{}", e));
-    let (cmd, args) = split_cmd
-        .split_first()
-        .unwrap_or_else(|| panic!("error in getting command"));
+    execute_str.split("&&").for_each(|mut cmd| {
+        cmd = cmd.trim();
+        println!("executing cmd {}", cmd);
+        let split_cmd = shell_words::split(&cmd).unwrap_or_else(|e| panic!("{}", e));
+        let (name, args) = split_cmd
+            .split_first()
+            .unwrap_or_else(|| panic!("error in getting command"));
 
-    let mut command = std::process::Command::new(cmd);
-    for arg in args {
-        command.arg(arg);
-    }
-    command.status().expect("command failed");
+        let mut command = std::process::Command::new(name);
+        for arg in args {
+            command.arg(arg);
+        }
+
+        command.status().expect("command failed");
+    });
 }
 
 fn mass_replace_in_string(mut cmd: String, missing_fields: Vec<MissingField>) -> String {
+    debug!("start getting user input for command");
     for field in missing_fields {
         let mut value = String::new();
         _ = stdout().flush().expect("failed to flush stdout");
-        print!("Enter the value for {} -> ", field.key);
+        println!("Enter the value for {} -> ", field.key);
         _ = stdin()
             .read_line(&mut value)
             .expect("error in getting user input");
