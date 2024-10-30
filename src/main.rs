@@ -14,134 +14,134 @@ mod models;
 
 fn main() {
     // set log level from args
-    // let matcher = Command::new("cli")
-    //     .about("todo")
-    //     .version("1.0")
-    //     .author("Shubham")
-    //     .arg(
-    //         Arg::new("log")
-    //             .short('l')
-    //             .value_name("LEVEL")
-    //             .required(false)
-    //             .action(ArgAction::Append)
-    //             .default_value("debug")
-    //             .default_missing_value("debug")
-    //             .num_args(1),
-    //     )
-    //     .arg(
-    //         arg!([input] "users query")
-    //             .trailing_var_arg(true)
-    //             .num_args(1..),
-    //     )
-    //     .get_matches();
-    //
-    // set_log_level(&matcher);
-    //
-    // let user_query = matcher
-    //     .try_get_many::<String>("input")
-    //     .unwrap_or_else(|err| panic!("{}", err))
-    //     .unwrap_or_else(|| panic!("no user input"))
-    //     .cloned()
-    //     .collect::<Vec<String>>()
-    //     .join(" ");
-    //
-    // let context = init_and_get_context("/Users/shubham/.temp_his".to_string());
-    // let system_prompt = Prompts::get_system_prompt(&context);
-    //
-    // debug!("user query is {}", user_query);
-    // trace!(
-    //     "context is {}",
-    //     serde_json::to_string(&context).unwrap_or("unable to deserialize context".to_string())
-    // );
-    // trace!("system prompt is {}", system_prompt);
-    //
-    // let request_body = OllamaRequest {
-    //     model: "qwen2.5".to_string(),
-    //     format: "json".to_string(),
-    //     stream: false,
-    //     messages: vec![
-    //         OllamaMessage {
-    //             role: "system".to_string(),
-    //             content: system_prompt,
-    //         },
-    //         OllamaMessage {
-    //             role: "user".to_string(),
-    //             content: user_query,
-    //         },
-    //     ],
-    // };
-    //
-    // let response_text = Client::new()
-    //     .post("http://localhost:11434/api/chat")
-    //     .json(&request_body)
-    //     .timeout(Duration::from_secs(360))
-    //     .send()
-    //     .unwrap_or_else(|e| panic!("{}", e))
-    //     .text() // we can directly use json() as well, and specify the type after the let
-    //     // the issue is that the error messages are not clear in that case, thats why it is a 2 step process
-    //     .unwrap_or_else(|e| panic!("{}", e));
-    //
-    // trace!("raw response is {}", response_text);
-    //
-    // let response: OllamaResponse =
-    //     serde_json::from_str(&response_text).unwrap_or_else(|e| panic!("{}", e));
-    //
-    // debug!(
-    //     "response is {}",
-    //     serde_json::to_string(&response).unwrap_or("unable to deserialize response".to_string())
-    // );
-    //
-    // let suggestions: Vec<ModelSuggestion> =
-    //     serde_json::from_str::<OllamaPlaceholderResponse>(&response.message.content)
-    //         .unwrap_or_else(|e| panic!("{}", e))
-    //         .response;
-    //
-    // debug!(
-    //     "suggestions are \n {}",
-    //     serde_json::to_string(&suggestions)
-    //         .unwrap_or("unable to deserialize suggestions".to_string())
-    // );
-    //
-    // // check out iter mut
-    // println!("enter you choice");
-    // for (i, suggestion) in suggestions.iter().enumerate() {
-    //     println!("{} - {} \n{}", i, suggestion.cmd, suggestion.reasoning);
-    // }
-    //
-    // let mut user_choice_str = String::new();
-    // _ = stdout().flush().expect("failed to flush stdout");
-    // _ = stdin()
-    //     .read_line(&mut user_choice_str)
-    //     .expect("error in getting user input");
-    //
-    // debug!("user entered {}", user_choice_str.trim());
-    //
-    // // bubble up err to user
-    // let user_choice_idx_res = validate_and_get_user_input_as_int(&suggestions, user_choice_str);
-    // if user_choice_idx_res.is_err() {
-    //     panic!("{}", user_choice_idx_res.unwrap_err());
-    // }
-    //
-    // let user_choice = suggestions.get(user_choice_idx_res.unwrap()).unwrap();
-    // debug!("user selected the command {}", user_choice.cmd);
-    //
-    // let mut cmd_to_exec = user_choice.cmd.clone();
-    // if !user_choice.missing_fields.is_empty() {
-    //     cmd_to_exec = mass_replace_in_string(cmd_to_exec, user_choice.missing_fields.clone());
-    // }
-    //
-    // println!("cmd to exec is {}", cmd_to_exec);
+    let matcher = Command::new("cli")
+        .about("todo")
+        .version("1.0")
+        .author("Shubham")
+        .arg(
+            Arg::new("log")
+                .short('l')
+                .value_name("LEVEL")
+                .required(false)
+                .action(ArgAction::Append)
+                .default_value("debug")
+                .default_missing_value("debug")
+                .num_args(1),
+        )
+        .arg(
+            arg!([input] "users query")
+                .trailing_var_arg(true)
+                .num_args(1..),
+        )
+        .get_matches();
 
-    // let split_cmd = shell_words::split(&cmd_to_exec).unwrap_or_else(|e| panic!("{}", e));
-    // let (cmd, args) = split_cmd
-    //     .split_first()
-    //     .unwrap_or_else(|| panic!("error in getting command"));
+    set_log_level(&matcher);
 
-    let status = std::process::Command::new("git")
-        .arg("add")
-        .arg("-A")
-        .spawn()
-        .expect("git command failed to start");
+    let user_query = matcher
+        .try_get_many::<String>("input")
+        .unwrap_or_else(|err| panic!("{}", err))
+        .unwrap_or_else(|| panic!("no user input"))
+        .cloned()
+        .collect::<Vec<String>>()
+        .join(" ");
+
+    let context = init_and_get_context("/Users/shubham/.temp_his".to_string());
+    let system_prompt = Prompts::get_system_prompt(&context);
+
+    debug!("user query is {}", user_query);
+    trace!(
+        "context is {}",
+        serde_json::to_string(&context).unwrap_or("unable to deserialize context".to_string())
+    );
+    trace!("system prompt is {}", system_prompt);
+
+    let request_body = OllamaRequest {
+        model: "qwen2.5".to_string(),
+        format: "json".to_string(),
+        stream: false,
+        messages: vec![
+            OllamaMessage {
+                role: "system".to_string(),
+                content: system_prompt,
+            },
+            OllamaMessage {
+                role: "user".to_string(),
+                content: user_query,
+            },
+        ],
+    };
+
+    let response_text = Client::new()
+        .post("http://localhost:11434/api/chat")
+        .json(&request_body)
+        .timeout(Duration::from_secs(360))
+        .send()
+        .unwrap_or_else(|e| panic!("{}", e))
+        .text() // we can directly use json() as well, and specify the type after the let
+        // the issue is that the error messages are not clear in that case, thats why it is a 2 step process
+        .unwrap_or_else(|e| panic!("{}", e));
+
+    trace!("raw response is {}", response_text);
+
+    let response: OllamaResponse =
+        serde_json::from_str(&response_text).unwrap_or_else(|e| panic!("{}", e));
+
+    debug!(
+        "response is {}",
+        serde_json::to_string(&response).unwrap_or("unable to deserialize response".to_string())
+    );
+
+    let suggestions: Vec<ModelSuggestion> =
+        serde_json::from_str::<OllamaPlaceholderResponse>(&response.message.content)
+            .unwrap_or_else(|e| panic!("{}", e))
+            .response;
+
+    debug!(
+        "suggestions are \n {}",
+        serde_json::to_string(&suggestions)
+            .unwrap_or("unable to deserialize suggestions".to_string())
+    );
+
+    // check out iter mut
+    println!("enter you choice");
+    for (i, suggestion) in suggestions.iter().enumerate() {
+        println!("{} - {} \n{}", i, suggestion.cmd, suggestion.reasoning);
+    }
+
+    let mut user_choice_str = String::new();
+    _ = stdout().flush().expect("failed to flush stdout");
+    _ = stdin()
+        .read_line(&mut user_choice_str)
+        .expect("error in getting user input");
+
+    debug!("user entered {}", user_choice_str.trim());
+
+    // bubble up err to user
+    let user_choice_idx_res = validate_and_get_user_input_as_int(&suggestions, user_choice_str);
+    if user_choice_idx_res.is_err() {
+        panic!("{}", user_choice_idx_res.unwrap_err());
+    }
+
+    let user_choice = suggestions.get(user_choice_idx_res.unwrap()).unwrap();
+    debug!("user selected the command {}", user_choice.cmd);
+
+    let mut cmd_to_exec = user_choice.cmd.clone();
+    if !user_choice.missing_fields.is_empty() {
+        cmd_to_exec = mass_replace_in_string(cmd_to_exec, user_choice.missing_fields.clone());
+    }
+
+    println!("cmd to exec is {}", cmd_to_exec);
+
+    let split_cmd = shell_words::split(&cmd_to_exec).unwrap_or_else(|e| panic!("{}", e));
+    let (cmd, args) = split_cmd
+        .split_first()
+        .unwrap_or_else(|| panic!("error in getting command"));
+
+    let mut command = std::process::Command::new(cmd);
+    for arg in args {
+        command.arg(arg);
+    }
+    command.status().expect("command failed");
 }
 
 fn mass_replace_in_string(mut cmd: String, missing_fields: Vec<MissingField>) -> String {
