@@ -7,6 +7,9 @@ use clap::{arg, Arg, ArgAction, ArgMatches, Command};
 use env_logger;
 use log::{debug, trace};
 use reqwest::blocking::Client;
+use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+use serde_json::{from_str, to_string};
 
 // use serde_json::Value::String;
 use models::*;
@@ -47,7 +50,7 @@ fn main() {
         .join(" ");
 
     let context = init_and_get_context("/Users/shubham/.temp_his".to_string());
-    let system_prompt = Prompts::get_system_prompt(&context);
+    let system_prompt = Prompts::get_system_prompt_2(&context);
 
     trace!("user query is {}", user_query);
     trace!(
@@ -72,85 +75,85 @@ fn main() {
         ],
     };
 
-    let response_text = Client::new()
-        .post("http://localhost:11434/api/chat")
-        .json(&request_body)
-        .timeout(Duration::from_secs(360))
-        .send()
-        .unwrap_or_else(|e| panic!("{}", e))
-        .text() // we can directly use json() as well, and specify the type after the let
-        // the issue is that the error messages are not clear in that case, thats why it is a 2 step process
-        .unwrap_or_else(|e| panic!("{}", e));
-
+    // let response_text = Client::new()
+    //     .post("http://localhost:11434/api/chat")
+    //     .json(&request_body)
+    //     .timeout(Duration::from_secs(360))
+    //     .send()
+    //     .unwrap_or_else(|e| panic!("{}", e))
+    //     .text() // we can directly use json() as well, and specify the type after the let
+    //     // the issue is that the error messages are not clear in that case, thats why it is a 2 step process
+    //     .unwrap_or_else(|e| panic!("{}", e));
+    let response_text = DummyResponse::get_dummy_response();
     trace!("raw response is {}", response_text);
 
-    let response: OllamaResponse =
-        serde_json::from_str(&response_text).unwrap_or_else(|e| panic!("{}", e));
-
+    let response = from_str::<OllamaResponse>(&response_text).unwrap_or_else(|e| panic!("{}", e));
     debug!(
         "response is {}",
-        serde_json::to_string(&response).unwrap_or("unable to deserialize response".to_string())
+        to_string(&response).unwrap_or("unable to deserialize response".to_string())
     );
 
     let suggestions: Vec<ModelSuggestion> =
-        serde_json::from_str::<OllamaPlaceholderResponse>(&response.message.content)
+        from_str::<OllamaPlaceholderResponse>(&response.message.content)
             .unwrap_or_else(|e| panic!("{}", e))
             .response;
-
     debug!(
         "suggestions are \n {}",
-        serde_json::to_string(&suggestions)
-            .unwrap_or("unable to deserialize suggestions".to_string())
+        to_string(&suggestions).unwrap_or("unable to deserialize suggestions".to_string())
     );
 
+    // let content = r#"
+    //  {"model":"qwen2.5","created_at":"2024-11-04T02:50:52.832969Z","message":{"role":"assistant","content":"{\n    \"response\": [\n        {\n            \"reasoning\": \"Based on the user's history, it seems they might be working on a Rust project and need to build or run it.\",\n            \"commands\": [\n                {\n                    \"cmd\": \"cargo build\",\n                    \"missing_fields\": [],\n                    \"reasoning\": \"This command builds the project. Since no missing fields are present, we can directly suggest this.\"\n                },\n                {\n                    \"cmd\": \"cargo run\",\n                    \"missing_fields\": [],\n                    \"reasoning\": \"After building, running the project is a common next step. No missing fields needed here.\"\n                }\n            ]\n        },\n        {\n            \"reasoning\": \"The user might want to open their `Cargo.toml` file in an editor since they are working on a Rust project.\",\n            \"commands\": [\n                {\n                    \"cmd\": \"nvim Cargo.toml\",\n                    \"missing_fields\": [],\n                    \"reasoning\": \"Opening the `Cargo.toml` file for potential modifications is likely.\"\n                }\n            ]\n        },\n        {\n            \"reasoning\": \"Given the presence of a `.git` directory, it's possible that the user wants to manage their project using Git.\",\n            \"commands\": [\n                {\n                    \"cmd\": \"git status\",\n                    \"missing_fields\": [],\n                    \"reasoning\": \"Checking the current state of the repository is a common first step after working on code.\"\n                },\n                {\n                    \"cmd\": \"git add .; git commit -m 'Adding changes to src directory'; git push\",\n                    \"missing_fields\": [\n                        {\"field\": \"commit_message\", \"suggested_value\": \"Adding changes to src directory\"}\n                    ],\n                    \"reasoning\": \"After making changes, committing and pushing them are typical next steps.\"\n                }\n            ]\n        },\n        {\n            \"reasoning\": \"The user might want to test their project locally or on another machine.\",\n            \"commands\": [\n                {\n                    \"cmd\": \"cargo test\",\n                    \"missing_fields\": [],\n                    \"reasoning\": \"Running tests is a common practice after making changes.\"\n                }\n            ]\n        },\n        {\n            \"reasoning\": \"The user might be interested in exploring the `src` directory to understand its contents.\",\n            \"commands\": [\n                {\n                    \"cmd\": \"tree src\",\n                    \"missing_fields\": [],\n                    \"reasoning\": \"Listing the contents of the `src` directory can help explore the project structure.\"\n                }\n            ]\n        },\n        {\n            \"reasoning\": \"Given the presence of a `.gitignore` file, it's possible that the user wants to ensure their files are tracked by Git.\",\n            \"commands\": [\n                {\n                    \"cmd\": \"cat .gitignore\",\n                    \"missing_fields\": [],\n                    \"reasoning\": \"Reviewing the contents of the `.gitignore` file can help manage version control.\"\n                }\n            ]\n        }\n    ]\n}"},"done_reason":"stop","total_duration":130625288958,"load_duration":28920875,"prompt_eval_count":1834,"prompt_eval_duration":20631456000,"eval_count":602,"eval_duration":109943901000}
+    // "#;
+
     // check out iter mut
-    println!("enter you choice");
-    for (i, suggestion) in suggestions.iter().enumerate() {
-        println!("{} - {} \n{}", i, suggestion.cmd, suggestion.reasoning);
-    }
-
-    let mut user_choice_str = String::new();
-    _ = stdout().flush().expect("failed to flush stdout");
-    _ = stdin()
-        .read_line(&mut user_choice_str)
-        .expect("error in getting user input");
-
-    debug!("user entered {}", user_choice_str.trim());
-
-    // bubble up err to user
-    let user_choice_idx_res = validate_and_get_user_input_as_int(&suggestions, user_choice_str);
-    if user_choice_idx_res.is_err() {
-        panic!("{}", user_choice_idx_res.unwrap_err());
-    }
-
-    let user_choice = suggestions.get(user_choice_idx_res.unwrap()).unwrap();
-    debug!("user selected the command {}", user_choice.cmd);
-
-    let mut execute_str = user_choice.cmd.clone();
-    if !user_choice.missing_fields.is_empty() {
-        execute_str = mass_replace_in_string(execute_str, user_choice.missing_fields.clone());
-    }
-
-    println!("cmd to exec is {}", execute_str);
-
-    execute_str.split("&&").for_each(|mut cmd| {
-        cmd = cmd.trim();
-        println!("executing cmd {}", cmd);
-        let split_cmd = shell_words::split(&cmd).unwrap_or_else(|e| panic!("{}", e));
-        let (name, args) = split_cmd
-            .split_first()
-            .unwrap_or_else(|| panic!("error in getting command"));
-
-        let mut command = std::process::Command::new(name);
-        for arg in args {
-            command.arg(arg);
-        }
-
-        command.status().expect("command failed");
-    });
+    // println!("enter you choice");
+    // for (i, suggestion) in suggestions.iter().enumerate() {
+    //     println!("{} - {} \n{}", i, suggestion.cmd, suggestion.reasoning);
+    // }
+    //
+    // let mut user_choice_str = String::new();
+    // _ = stdout().flush().expect("failed to flush stdout");
+    // _ = stdin()
+    //     .read_line(&mut user_choice_str)
+    //     .expect("error in getting user input");
+    //
+    // debug!("user entered {}", user_choice_str.trim());
+    //
+    // // bubble up err to user
+    // let user_choice_idx_res = validate_and_get_user_input_as_int(&suggestions, user_choice_str);
+    // if user_choice_idx_res.is_err() {
+    //     panic!("{}", user_choice_idx_res.unwrap_err());
+    // }
+    //
+    // let user_choice = suggestions.get(user_choice_idx_res.unwrap()).unwrap();
+    // debug!("user selected the command {}", user_choice.cmd);
+    //
+    // let mut execute_str = user_choice.cmd.clone();
+    // if !user_choice.missing_fields.is_empty() {
+    //     execute_str = get_missing_params_from_user(execute_str, user_choice.missing_fields.clone());
+    // }
+    //
+    // println!("cmd to exec is {}", execute_str);
+    //
+    // execute_str.split("&&").for_each(|mut cmd| {
+    //     cmd = cmd.trim();
+    //     println!("executing cmd {}", cmd);
+    //     let split_cmd = shell_words::split(&cmd).unwrap_or_else(|e| panic!("{}", e));
+    //     let (name, args) = split_cmd
+    //         .split_first()
+    //         .unwrap_or_else(|| panic!("error in getting command"));
+    //
+    //     let mut command = std::process::Command::new(name);
+    //     for arg in args {
+    //         command.arg(arg);
+    //     }
+    //
+    //     command.status().expect("command failed");
+    // });
 }
 
-fn mass_replace_in_string(mut cmd: String, missing_fields: Vec<MissingField>) -> String {
+fn get_missing_params_from_user(mut cmd: String, missing_fields: Vec<MissingField>) -> String {
     debug!("start getting user input for command");
     for field in missing_fields {
         let mut value = String::new();
@@ -210,11 +213,11 @@ fn set_log_level(matcher: &ArgMatches) {
     };
 
     match log_level.to_lowercase().as_str() {
-        "error" => env::set_var("RUST_LOG", "error"),
-        "warn" => env::set_var("RUST_LOG", "warn"),
-        "info" => env::set_var("RUST_LOG", "warn"),
-        "debug" => env::set_var("RUST_LOG", "debug"),
-        "trace" => env::set_var("RUST_LOG", "trace"),
+        "error" | "e" => env::set_var("RUST_LOG", "error"),
+        "warn" | "w" => env::set_var("RUST_LOG", "warn"),
+        "info" | "i" => env::set_var("RUST_LOG", "warn"),
+        "debug" | "d" => env::set_var("RUST_LOG", "debug"),
+        "trace" | "t" => env::set_var("RUST_LOG", "trace"),
         _ => env::set_var("RUST_LOG", "debug"),
     }
 
